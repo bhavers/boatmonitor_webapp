@@ -10,10 +10,32 @@
 
 </style>
 <body>
+<h2 id="title" />
 
-<!-- load the d3.js library -->     
+<!-- load the d3.js library -->    	
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
+
+// determine view port width
+var viewPortWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+
+// default graph width is 960 
+var graphWidth = 960;
+// include 2 weeks of data by default 
+var daysToInclude = 14;
+
+if (viewPortWidth < graphWidth) {
+	// reduce graph width and limit data based on view port size
+	graphWidth = viewPortWidth;
+	if (viewPortWidth < 400) {
+		daysToInclude = 3;
+	} else {
+		daysToInclude = 7;
+	}
+}
+// extract sensor name from URL
+var sensorName = location.search.substr(1).split('=')[1];
+document.getElementById('title').innerText = sensorName;
 
 // set the dimensions and margins of the graph
 var margin = {top: 20, right: 20, bottom: 30, left: 50},
@@ -21,7 +43,22 @@ var margin = {top: 20, right: 20, bottom: 30, left: 50},
     height = 500 - margin.top - margin.bottom;
 
 // parse the date / time
-var parseTime = d3.timeParse("%d-%b-%y");
+// var parseTime = d3.timeParse("%d-%b-%y");
+
+//D3 v4 Time formats: https://github.com/d3/d3/blob/master/API.md#time-formats-d3-time-format
+// http://www.d3noob.org/2012/12/formatting-date-time-on-d3js-graph.html
+// Date format has too many millisecond positions (9 instead of 3), therefore the last 6 has to be cut off.
+// See https://github.com/d3/d3-time-format/issues/24)
+
+
+var parseMilliseconds = d3.utcParse("%Y-%m-%dT%H:%M:%S.%LZ"),
+    stripNanoseconds = function(s) { return s.slice(0, -7) + "Z"; },
+    parseTime = function(s) { return parseMilliseconds(stripNanoseconds(s)); };
+
+/** Test
+var temp = "2016-12-29T22:14:08.183532101Z";
+console.log("Temp = " + parseTime(temp));
+*/
 
 // set the ranges
 var x = d3.scaleTime().range([0, width]);
@@ -29,8 +66,8 @@ var y = d3.scaleLinear().range([height, 0]);
 
 // define the line
 var valueline = d3.line()
-    .x(function(d) { return x(d.date); })
-    .y(function(d) { return y(d.close); });
+    .x(function(d) { return x(d.timestamp); })
+    .y(function(d) { return y(d.boardtemp); });
 
 // append the svg obgect to the body of the page
 // appends a 'group' element to 'svg'
@@ -43,18 +80,21 @@ var svg = d3.select("body").append("svg")
           "translate(" + margin.left + "," + margin.top + ")");
 
 // Get the data
-d3.csv("data.csv", function(error, data) {
+//d3.csv("https://boatmonitor.mybluemix.net/sensors/lennert_abn_test/history"+ sensorName + "/history?days=" + daysToInclude, function(error, data) {
+d3.csv("https://boatmonitor.mybluemix.net/sensors/"+ sensorName + "/history?days=" + daysToInclude, function(error, data) {
   if (error) throw error;
 
   // format the data
   data.forEach(function(d) {
-      d.date = parseTime(d.date);
-      d.close = +d.close;
+      d.timestamp = parseTime(d.timestamp);
+      d.boardtemp = +d.boardtemp;
   });
-
+	//console.log(data[0]);
+  
+  
   // Scale the range of the data
-  x.domain(d3.extent(data, function(d) { return d.date; }));
-  y.domain([0, d3.max(data, function(d) { return d.close; })]);
+  x.domain(d3.extent(data, function(d) { return d.timestamp; }));
+  y.domain([0, d3.max(data, function(d) { return d.boardtemp; })]);
 
   // Add the valueline path.
   svg.append("path")
