@@ -1,3 +1,4 @@
+
 'use strict';
 
 var sensorsApp = angular.module('sensorsApp', ['ngResource']);
@@ -8,7 +9,7 @@ var sensorsApp = angular.module('sensorsApp', ['ngResource']);
 */
 sensorsApp.factory('SensorList', ['$resource',
   function($resource){
-    return $resource('http://poseidon.mybluemix.net/sensors', {}, {
+    return $resource('http://boatmonitor.mybluemix.net/sensors', {}, {
       query: {method:'GET', isArray:true}
     });
   }]);
@@ -16,4 +17,5 @@ sensorsApp.factory('SensorList', ['$resource',
 var sensorsController = sensorsApp.controller('sensorsController', ['$scope', 'SensorList', function ($scope, SensorList) {
   $scope.sensors = SensorList.query();  
 }]);
+
 
