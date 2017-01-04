@@ -8,19 +8,48 @@
   stroke-width: 2px;
 }
 
+.axisSteelBlue text{
+  fill: steelblue;
+}
+
+.axisRed text{
+  fill: red;
+}
+
+body { font: 12px Arial;}
+
+.legend {
+    font-size: 12px;
+    font-weight: bold;
+	text-anchor: left;
+}
+// the text color of legend is styled separatedly at the bottom of this document.
+
+
 </style>
 <body>
+<a href="index.html">Back</a>
 <h2 id="title" />
+
 
 <!-- load the d3.js library -->    	
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
+/**
+*	Used this dual line example: https://bl.ocks.org/d3noob/814a2bcb3e7d8d8db74f36f77c8e6b7f
+*/
+
 
 // determine view port width
 var viewPortWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 
 // default graph width is 960 
-var graphWidth = 960;
+var graphWidth = 500;
+var graphHeight = 400;
+
+var minBatVolt = 3;
+var maxBatVolt = 5;
+
 // include 2 weeks of data by default 
 var daysToInclude = 14;
 
@@ -38,14 +67,14 @@ var sensorName = location.search.substr(1).split('=')[1];
 document.getElementById('title').innerText = sensorName;
 
 // set the dimensions and margins of the graph
-var margin = {top: 20, right: 20, bottom: 30, left: 50},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+var margin = {top: 20, right: 40, bottom: 30, left: 50},
+    width = graphWidth - margin.left - margin.right,
+    height = graphHeight - margin.top - margin.bottom;
 
 // parse the date / time
 // var parseTime = d3.timeParse("%d-%b-%y");
 
-//D3 v4 Time formats: https://github.com/d3/d3/blob/master/API.md#time-formats-d3-time-format
+// D3 v4 Time formats: https://github.com/d3/d3/blob/master/API.md#time-formats-d3-time-format
 // http://www.d3noob.org/2012/12/formatting-date-time-on-d3js-graph.html
 // Date format has too many millisecond positions (9 instead of 3), therefore the last 6 has to be cut off.
 // See https://github.com/d3/d3-time-format/issues/24)
@@ -62,13 +91,21 @@ console.log("Temp = " + parseTime(temp));
 
 // set the ranges
 var x = d3.scaleTime().range([0, width]);
-var y = d3.scaleLinear().range([height, 0]);
+var y1 = d3.scaleLinear().range([height, 0]);
+var y2 = d3.scaleLinear().range([height, 0]);
 
 // define the line
 var valueline = d3.line()
+	.curve(d3.curveBasis)   // A smooth interpolated line, see: https://bl.ocks.org/d3noob/ced1b9b18bd8192d2c898884033b5529
     .x(function(d) { return x(d.timestamp); })
-    .y(function(d) { return y(d.boardtemp); });
+    .y(function(d) { return y1(d.boardtemp); });
 
+var batvolt_line = d3.line()
+	.curve(d3.curveBasis)
+    .x(function(d) { return x(d.timestamp); })
+    .y(function(d) { return y2(d.batvolt); });
+	
+	
 // append the svg obgect to the body of the page
 // appends a 'group' element to 'svg'
 // moves the 'group' element to the top left margin
@@ -80,7 +117,6 @@ var svg = d3.select("body").append("svg")
           "translate(" + margin.left + "," + margin.top + ")");
 
 // Get the data
-//d3.csv("https://boatmonitor.mybluemix.net/sensors/lennert_abn_test/history"+ sensorName + "/history?days=" + daysToInclude, function(error, data) {
 d3.csv("https://boatmonitor.mybluemix.net/sensors/"+ sensorName + "/history?days=" + daysToInclude, function(error, data) {
   if (error) throw error;
 
@@ -88,29 +124,70 @@ d3.csv("https://boatmonitor.mybluemix.net/sensors/"+ sensorName + "/history?days
   data.forEach(function(d) {
       d.timestamp = parseTime(d.timestamp);
       d.boardtemp = +d.boardtemp;
+	  d.batvolt = +d.batvolt;
   });
 	//console.log(data[0]);
   
   
   // Scale the range of the data
   x.domain(d3.extent(data, function(d) { return d.timestamp; }));
-  y.domain([0, d3.max(data, function(d) { return d.boardtemp; })]);
+  y1.domain([d3.min(data, function(d) { return Math.min(d.boardtemp); })-5, d3.max(data, function(d) { return Math.max(d.boardtemp); })]);
+//  y2.domain([0, d3.max(data, function(d) { return Math.max(d.batvolt); })]);
+  y2.domain([minBatVolt, maxBatVolt]);
 
   // Add the valueline path.
   svg.append("path")
-      .data([data])
+	  .data([data])
       .attr("class", "line")
       .attr("d", valueline);
 
+  // Add the valueline2 path.
+  svg.append("path")
+      .data([data])
+      .attr("class", "line")
+	  .style("stroke", "red")
+      .attr("d", batvolt_line);
+	  
   // Add the X Axis
   svg.append("g")
       .attr("transform", "translate(0," + height + ")")
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(x)
+		.ticks(5));					// reduce the number of labels on the axis, see: http://www.d3noob.org/2016/08/changing-number-of-ticks-on-axis-in.html
 
-  // Add the Y Axis
+  // Add the Y1 Axis
   svg.append("g")
-      .call(d3.axisLeft(y));
+      .attr("class", "axisSteelBlue")
+	  .call(d3.axisLeft(y1)
+		.ticks(6));	
 
+  // Add the Y2 Axis
+  svg.append("g")
+	  .attr("class", "axisRed")
+	  .attr("transform", "translate( " + width + ", 0 )")
+	  .call(d3.axisRight(y2)
+		.ticks(5));	
+		
+	// Add the Legend, see https://bl.ocks.org/d3noob/ced1b9b18bd8192d2c898884033b5529 (legend is part of interpolate example)
+	// Now below each other, could also rotate on y-axis, but need some fiddling to get that right
+	// .attr fields that are commented out work well width graphWidth = 500 and  graphHeight = 400, but doesn´t dynamically scale.
+    svg.append("text")
+		//.attr("x", -100)  // space legend
+        //.attr("y", height+100)
+		//.attr("transform", "rotate(-90)")
+		.attr("x", width-width+30)  // space legend
+        .attr("y", height-10)
+		.attr("class", "legend")
+		.style("fill", "red") 
+        .text("Battery voltage (V)");
+		
+		
+	// Add the Legend
+	svg.append("text")
+        .attr("x", width-width+30)  // space legend
+        .attr("y", height-25)
+        .attr("class", "legend")
+		.style("fill", "blue") 
+        .text("Temperature (C)");
 });
 
 </script>
