@@ -9,7 +9,7 @@ var sensorsApp = angular.module('sensorsApp', ['ngResource']);
 */
 sensorsApp.factory('SensorList', ['$resource',
   function($resource){
-    return $resource('http://boatmonitor.mybluemix.net/sensors', {}, {
+    return $resource('https://boatmonitor.mybluemix.net/sensors', {}, {
       query: {method:'GET', isArray:true}
     });
   }]);
