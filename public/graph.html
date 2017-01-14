@@ -56,6 +56,8 @@ var graphHeight = 400;
 
 var minBatVolt = 3;
 var maxBatVolt = 5;
+var minTemp = -20;
+var maxTemp = 40;
 
 // include 2 weeks of data by default 
 var daysToInclude = 14;
@@ -138,8 +140,12 @@ d3.csv("https://boatmonitor.mybluemix.net/sensors/"+ sensorName + "/history?days
   
   // Scale the range of the data
   x.domain(d3.extent(data, function(d) { return d.timestamp; }));
-  y1.domain([d3.min(data, function(d) { return Math.min(d.boardtemp); })-5, d3.max(data, function(d) { return Math.max(d.boardtemp); })]);
+  
+// Two line below for dynamically adapting the y-axis
+//  y1.domain([d3.min(data, function(d) { return Math.min(d.boardtemp); })-5, d3.max(data, function(d) { return Math.max(d.boardtemp); })]);
 //  y2.domain([0, d3.max(data, function(d) { return Math.max(d.batvolt); })]);
+// Or these two lines for a fixed y-axis
+  y1.domain([minTemp, maxTemp]);
   y2.domain([minBatVolt, maxBatVolt]);
 
   // Add the valueline path.
