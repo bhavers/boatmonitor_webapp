@@ -31,7 +31,6 @@
 		}
 		// the text color of legend is styled separatedly at the bottom of this document.
 
-
 		</style>
 	</head>
 <body>
@@ -56,11 +55,11 @@ var graphHeight = 400;
 
 var minBatVolt = 3;
 var maxBatVolt = 5;
-var minTemp = -20;
+var minTemp = -15;
 var maxTemp = 40;
 
 // include 2 weeks of data by default 
-var daysToInclude = 14;
+var daysToInclude = 7;
 
 if (viewPortWidth < graphWidth) {
 	// reduce graph width and limit data based on view port size
@@ -87,10 +86,15 @@ var margin = {top: 20, right: 40, bottom: 30, left: 50},
 // http://www.d3noob.org/2012/12/formatting-date-time-on-d3js-graph.html
 // Date format has too many millisecond positions (9 instead of 3), therefore the last 6 has to be cut off.
 // See https://github.com/d3/d3-time-format/issues/24)
+// Additional problem: the SODAQ device does not always return 9 positions, sometimes only 8,7 or even 6.
+// If you would cut off (s.slice routine) -7 positions the parseTime function will not work correctly.
+// Workaround is to calculate the numer of positions to cut of. With 9 positions the total length of 
+// the string return by the d3.utcParse function is 30 (as s.length will return). With 6 positions it will return 27.
+// Therefore 23-s.length in stripNanoseconds will return right number of positions to cut off (somewhere between -7 and -4). 
 
 
 var parseMilliseconds = d3.utcParse("%Y-%m-%dT%H:%M:%S.%LZ"),
-    stripNanoseconds = function(s) { return s.slice(0, -7) + "Z"; },
+    stripNanoseconds = function(s) {return s.slice(0, 23-s.length) + "Z";},
     parseTime = function(s) { return parseMilliseconds(stripNanoseconds(s)); };
 
 /** Test
@@ -134,6 +138,7 @@ d3.csv("https://boatmonitor.mybluemix.net/sensors/"+ sensorName + "/history?days
       d.timestamp = parseTime(d.timestamp);
       d.boardtemp = +d.boardtemp;
 	  d.batvolt = +d.batvolt;
+	  //console.log("Time = " + d.timestamp + "  || Temp = " + d.boardtemp);
   });
 	//console.log(data[0]);
   
@@ -204,4 +209,6 @@ d3.csv("https://boatmonitor.mybluemix.net/sensors/"+ sensorName + "/history?days
 });
 
 </script>
+
+
 </body>
